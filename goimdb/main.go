@@ -131,6 +131,38 @@ func createMovieHandler(c echo.Context) error {
 	// return c.JSON(http.StatusCreated, m) // 201 = http.StatusCreated
 }
 
+func updateMovieHandler(c echo.Context) error {
+	imdbID := c.Param("imdbID")
+	fmt.Println("id : ", imdbID)
+
+	updateValueMovie := &Movie{}
+	if err := c.Bind(updateValueMovie); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+	newRating := updateValueMovie.Rating
+	fmt.Println("rating: ", newRating)
+	// fmt.Println("updateValueMovie: ", updateValueMovie)
+
+	// เปิด statement
+	stmt, err := db.Prepare(`
+	UPDATE goimdb
+	SET rating = $1
+	WHERE imdbID = $2
+	`)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	defer stmt.Close() //  ควรปิดหลังเปิด statement เสมอ
+
+	upd, err := stmt.Exec(newRating, imdbID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+	fmt.Println("updated value : ", upd)
+
+	return c.JSON(http.StatusOK, "update movie")
+}
+
 var db *sql.DB
 
 func conn() {
@@ -172,6 +204,8 @@ func main() {
 	e.GET("/movies/:imdbID", getMovieByIDHandler) // /:id คือ path params
 
 	e.POST("/movies", createMovieHandler)
+
+	e.PUT("/movies/:imdbID", updateMovieHandler)
 
 	PORT := "2565"
 
